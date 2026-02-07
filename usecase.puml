@@ -1,0 +1,46 @@
+@startuml 投資家リスト作成ツール ユースケース図
+
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam defaultFontName "Noto Sans CJK JP"
+skinparam shadowing false
+
+left to right direction
+
+actor "ファウンダー" as founder
+
+rectangle "投資家リスト作成ツール" {
+  usecase "VCを検索する\n（会社名・部分一致）" as UC1
+  usecase "キャピタリスト詳細を\n閲覧する" as UC2
+  usecase "財務モデルフィルターで\n絞り込む" as UC3
+  usecase "定性判定\n（⚪/△/✖）を確認する" as UC4
+  usecase "判定理由の詳細を\n確認する" as UC5
+  usecase "アプローチ方針を\n確認する" as UC6
+}
+
+founder --> UC1
+
+UC1 <.. UC2 : <<extend>>
+UC1 <.. UC3 : <<extend>>
+UC2 ..> UC4 : <<include>>
+UC4 <.. UC5 : <<extend>>
+UC5 <.. UC6 : <<extend>>
+
+note right of UC1
+  VC会社情報（名前・URL・投資テーマ・
+  代表投資実績・投資方針サマリ）と
+  キャピタリスト一覧を表示
+end note
+
+note right of UC2
+  必ず「VC → キャピタリスト」の
+  導線を通す（直接検索不可）
+end note
+
+note bottom of UC5
+  ⚪/△判定の根拠を詳細に確認
+  （投資実績・発言・記事等の
+  具体的な証拠を表示）
+end note
+
+@enduml
