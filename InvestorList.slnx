@@ -1,0 +1,28 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/adapter/">
+    <Project Path="src/adapter/InvestorList.Adapter.csproj" />
+  </Folder>
+  <Folder Name="/src/application/">
+    <Project Path="src/application/InvestorList.Application.csproj" />
+  </Folder>
+  <Folder Name="/src/domain/">
+    <Project Path="src/domain/InvestorList.Domain.csproj" />
+  </Folder>
+  <Folder Name="/src/port/">
+    <Project Path="src/port/InvestorList.Port.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/adapter/">
+    <Project Path="tests/adapter/InvestorList.Adapter.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/application/">
+    <Project Path="tests/application/InvestorList.Application.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/domain/">
+    <Project Path="tests/domain/InvestorList.Domain.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/port/">
+    <Project Path="tests/port/InvestorList.Port.Tests.csproj" />
+  </Folder>
+</Solution>

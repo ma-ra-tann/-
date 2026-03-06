@@ -1,0 +1,96 @@
+@startuml 投資家リスト作成ツール アーキテクチャ
+
+skinparam defaultFontName "Noto Sans CJK JP"
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam linetype ortho
+
+title ヘキサゴナルアーキテクチャ全体図
+
+' ============================================================
+'  ドメイン層（中心）
+' ============================================================
+
+package "ドメイン" as domain {
+  [VCファンド]
+  [キャピタリスト]
+  [財務モデル関心度]
+  [根拠]
+}
+
+' ============================================================
+'  アプリケーション層（ユースケース）
+' ============================================================
+
+package "アプリケーション（ユースケース）" as app {
+  [VC会社情報を補完取得する] as UC1
+  [キャピタリストを抽出する] as UC2
+  [財務モデル関連性を分析する] as UC3
+  [財務モデル関心度を判定する] as UC4
+}
+
+' ============================================================
+'  ポート（インターフェース）
+' ============================================================
+
+package "入力ポート（Driving）" as inport {
+  interface "VCリスト処理ポート" as InVC
+  interface "キャピタリスト閲覧ポート" as InCap
+}
+
+package "出力ポート（Driven）" as outport {
+  interface "Web検索ポート" as OutSearch
+  interface "LLM分析ポート" as OutLLM
+  interface "データ永続化ポート" as OutDB
+}
+
+' ============================================================
+'  アダプター（外部）
+' ============================================================
+
+package "入力アダプター" as inadapter {
+  [Web UI] as WebUI
+}
+
+package "出力アダプター" as outadapter {
+  [Web検索API\n(Google/Bing)] as SearchAdapter
+  [LLM API\n(Claude)] as LLMAdapter
+  [SQLite / JSON] as DBAdapter
+}
+
+' ============================================================
+'  依存関係
+' ============================================================
+
+' 入力アダプター → 入力ポート → アプリケーション
+WebUI --> InVC
+WebUI --> InCap
+
+InVC --> UC1
+InVC --> UC2
+InCap --> UC3
+InCap --> UC4
+
+' アプリケーション → ドメイン
+UC1 --> domain
+UC2 --> domain
+UC3 --> domain
+UC4 --> domain
+
+' アプリケーション → 出力ポート（依存の方向）
+UC1 --> OutSearch
+UC2 --> OutSearch
+UC3 --> OutSearch
+UC3 --> OutLLM
+UC4 --> OutLLM
+UC1 --> OutDB
+UC2 --> OutDB
+UC3 --> OutDB
+UC4 --> OutDB
+
+' 出力アダプター → 出力ポート（依存関係逆転）
+SearchAdapter ..> OutSearch : implements
+LLMAdapter ..> OutLLM : implements
+DBAdapter ..> OutDB : implements
+
+@enduml
