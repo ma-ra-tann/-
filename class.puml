@@ -1,0 +1,37 @@
+@startuml 投資家リスト作成ツール ドメインモデル
+
+skinparam defaultFontName "Noto Sans CJK JP"
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+title 投資家リスト作成ツール ドメインモデル
+
+class VCファンド {
+  VC名
+  WebサイトURL
+  投資ステージ
+  投資テーマ
+}
+
+class キャピタリスト {
+  氏名
+  役職
+  投資担当領域
+}
+
+class 財務モデル関心度 {
+  ステータス（あり/不明/なし）
+}
+
+class 根拠 {
+  種別（投資実績/発言/記事/登壇）
+  内容要約
+  情報ソースURL
+}
+
+VCファンド "1" *-- "0..*" キャピタリスト : 所属する
+
+キャピタリスト "1" -- "1" 財務モデル関心度
+財務モデル関心度 "1" *-- "0..*" 根拠 : もとになる
+
+@enduml
