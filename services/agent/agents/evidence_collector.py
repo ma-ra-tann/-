@@ -67,7 +67,7 @@ class EvidenceCollector:
 JSON配列のみを返してください。説明文は不要です。
 基準を満たす強い根拠が見つからない場合は、絶対に推測せず空配列 [] を返してください。
 
-種別(type)は以下のいずれか: Portfolio, Statement, Article, Talk, Background
+種別(type)は以下のいずれか: OfficialProfile, Background, SocialMedia, Blog, Podcast, Article, Talk, Portfolio, InvestmentThesis, Statement, Other
 [
   {{"type": "種別", "summary": "内容要約（事実のみを日本語で簡潔に）", "source_url": "情報ソースURL"}}
 ]
