@@ -9,11 +9,12 @@ class EvidenceCollector:
         self._claude = claude
 
     async def collect(self, capitalist_name: str, vc_name: str = "") -> list[Evidence]:
-        # 1回目の検索（よりハードコアなファイナンス・モデリング用語に絞る）
+        # 1回目の検索（よりハードコアなファイナンス・モデリング用語 ＋ SNS/ブログのドメイン指定）
         queries = [
             f"{capitalist_name} {vc_name} 財務モデル OR 財務モデリング OR Financial Modeling",
             f"{capitalist_name} {vc_name} FP&A OR 予実管理 OR ユニットエコノミクス",
-            f"{capitalist_name} {vc_name} CFO OR 投資銀行 OR 公認会計士"
+            f"{capitalist_name} {vc_name} CFO OR 投資銀行 OR 公認会計士",
+            f"{capitalist_name} {vc_name} site:note.com OR site:twitter.com OR site:linkedin.com" # SNS・ブログを狙い撃ち
         ]
         
         all_results = []
@@ -83,7 +84,8 @@ JSON配列のみを返してください。説明文は不要です。
             if not evidences:
                 retry_queries = [
                     f"{capitalist_name} {vc_name} LTV CAC メトリクス",
-                    f"{capitalist_name} {vc_name} 資金調達 エクイティストーリー"
+                    f"{capitalist_name} {vc_name} 資金調達 エクイティストーリー",
+                    f"{capitalist_name} {vc_name} インタビュー podcast" # 音声メディアやインタビューを狙う
                 ]
                 retry_results = []
                 for q in retry_queries:
