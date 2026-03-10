@@ -59,7 +59,7 @@ async function loadVCList() {
     table.style.display = 'table';
     empty.style.display = 'none';
     tbody.innerHTML = funds.map(f => {
-        const hasUrl = f.websiteUrl && f.websiteUrl !== '調査不足（URL不明）' && f.websiteUrl !== '調査不足（明記なし）';
+        const hasUrl = f.websiteUrl && f.websiteUrl.trim() !== '' && f.websiteUrl !== '調査不足（URL不明）' && f.websiteUrl !== '調査不足（明記なし）';
         const safeUrl = hasUrl ? f.websiteUrl.replace(/"/g, '&quot;') : '';
         return `
         <tr>
@@ -168,7 +168,7 @@ async function loadVCDetail(vcName) {
     currentVC = vcName;
     const detail = await api.getVCDetail(vcName);
 
-    const hasUrl = detail.websiteUrl && detail.websiteUrl !== '調査不足（URL不明）' && detail.websiteUrl !== '調査不足（明記なし）';
+    const hasUrl = detail.websiteUrl && detail.websiteUrl.trim() !== '' && detail.websiteUrl !== '調査不足（URL不明）' && detail.websiteUrl !== '調査不足（明記なし）';
     const safeUrl = hasUrl ? detail.websiteUrl.replace(/"/g, '&quot;') : '';
 
     document.getElementById('vc-detail-header').innerHTML = `
