@@ -229,22 +229,36 @@ main {
 
 table {
     width: 100%;
-    min-width: 800px; /* PC/スマホ問わず最低幅を確保して横スクロールさせる */
     border-collapse: separate;
     border-spacing: 0;
     background: var(--bg-card);
+    table-layout: fixed; /* 列幅を固定してはみ出さないようにする */
 }
 th, td {
     padding: 1.2rem 1rem;
     text-align: left;
     border-bottom: 2px solid var(--secondary-color);
-    word-break: keep-all; /* 単語の途中で改行されないようにする */
+    word-break: break-word; /* 単語の途中でも改行して枠内に収める */
+    white-space: normal; /* 折り返しを許可する */
 }
 /* 投資テーマ列など、長くなりやすい列は折り返しを許可する */
 td.wrap-text {
     white-space: normal;
-    min-width: 200px;
 }
+
+/* キャピタリスト一覧の列幅調整 */
+#all-capitalists-table th:nth-child(1) { width: 12%; } /* 関心度 */
+#all-capitalists-table th:nth-child(2) { width: 15%; } /* 氏名 */
+#all-capitalists-table th:nth-child(3) { width: 20%; } /* VC名 */
+#all-capitalists-table th:nth-child(4) { width: 20%; } /* 役職・ドメイン */
+#all-capitalists-table th:nth-child(5) { width: 33%; } /* 理由・エビデンス */
+
+/* VC一覧の列幅調整 */
+#vc-table th:nth-child(1) { width: 25%; } /* VC名 */
+#vc-table th:nth-child(2) { width: 15%; } /* ステージ */
+#vc-table th:nth-child(3) { width: 30%; } /* 投資テーマ */
+#vc-table th:nth-child(4) { width: 15%; } /* 分析状況 */
+#vc-table th:nth-child(5) { width: 15%; } /* 操作 */
 tr:last-child td {
     border-bottom: none;
 }
