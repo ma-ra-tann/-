@@ -233,6 +233,26 @@ tbody tr:hover {
     color: var(--primary-hover);
 }
 
+.url-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--secondary-color);
+    color: var(--primary-hover);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    flex-shrink: 0;
+}
+.url-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: scale(1.1) translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(125, 211, 252, 0.4);
+}
+
 .empty-message {
     text-align: center;
     color: var(--text-muted);

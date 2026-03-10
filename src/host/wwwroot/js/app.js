@@ -58,11 +58,20 @@ async function loadVCList() {
 
     table.style.display = 'table';
     empty.style.display = 'none';
-    tbody.innerHTML = funds.map(f => `
+    tbody.innerHTML = funds.map(f => {
+        const hasUrl = f.websiteUrl && f.websiteUrl !== '調査不足（URL不明）' && f.websiteUrl !== '調査不足（明記なし）';
+        const safeUrl = hasUrl ? f.websiteUrl.replace(/"/g, '&quot;') : '';
+        return `
         <tr>
             <td>
-                <a href="#" class="vc-link" data-name="${escapeHtml(f.name)}">${escapeHtml(f.name)}</a>
-                ${f.websiteUrl ? `<a href="${escapeHtml(f.websiteUrl)}" target="_blank" class="external-link" title="${escapeHtml(f.websiteUrl)}">&#128279;</a>` : ''}
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <a href="#" class="vc-link" data-name="${escapeHtml(f.name)}">${escapeHtml(f.name)}</a>
+                    ${hasUrl ? `
+                    <a href="${safeUrl}" target="_blank" class="url-btn" title="公式サイトを開く">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                    </a>
+                    ` : ''}
+                </div>
             </td>
             <td>${escapeHtml(f.investmentStage)}</td>
             <td>${escapeHtml(f.investmentTheme)}</td>
@@ -75,7 +84,7 @@ async function loadVCList() {
                     : `<button class="btn btn-detail" data-name="${escapeHtml(f.name)}">詳細</button>`}
             </td>
         </tr>
-    `).join('');
+    `}).join('');
 
     // Event: VC name link
     tbody.querySelectorAll('.vc-link').forEach(link => {
@@ -159,14 +168,20 @@ async function loadVCDetail(vcName) {
     currentVC = vcName;
     const detail = await api.getVCDetail(vcName);
 
+    const hasUrl = detail.websiteUrl && detail.websiteUrl !== '調査不足（URL不明）' && detail.websiteUrl !== '調査不足（明記なし）';
+    const safeUrl = hasUrl ? detail.websiteUrl.replace(/"/g, '&quot;') : '';
+
     document.getElementById('vc-detail-header').innerHTML = `
         <div class="vc-info">
-            <h2>${escapeHtml(detail.name)}</h2>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <h2>${escapeHtml(detail.name)}</h2>
+                ${hasUrl ? `
+                <a href="${safeUrl}" target="_blank" class="url-btn" title="公式サイトを開く" style="margin-top: 4px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                </a>
+                ` : ''}
+            </div>
             <p class="vc-meta">
-                ${detail.websiteUrl && detail.websiteUrl !== '調査不足（URL不明）' ? `<a href="${escapeHtml(detail.websiteUrl)}" target="_blank">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 2px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-                    公式サイト
-                </a><span style="margin: 0 0.5rem; color: #cbd5e1;">|</span>` : ''}
                 <span style="display: inline-flex; align-items: center; gap: 4px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
                     ${escapeHtml(detail.investmentStage)}
