@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>投資家リスト作成ツール</title>
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/style.css?v=1.5">
 </head>
 <body>
     <header>
@@ -16,12 +16,18 @@
     </header>
 
     <main>
+        <!-- タブナビゲーション -->
+        <div class="main-tabs">
+            <button id="tab-vc-list" class="main-tab-btn active">VC一覧</button>
+            <button id="tab-capitalist-list" class="main-tab-btn">キャピタリスト一覧</button>
+        </div>
+
         <!-- 画面1: VCリスト -->
         <section id="view-vc-list" class="view active">
             <div class="search-bar">
                 <input type="text" id="search-input" placeholder="VC名で検索...">
             </div>
-            <div style="overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div class="table-responsive-wrapper">
                 <table id="vc-table">
                     <thead>
                         <tr>
@@ -38,6 +44,36 @@
             <div id="vc-empty" class="empty-message" style="display:none;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
                 <p>VCが登録されていません。<br>右上の「VCリスト取込」から追加してください。</p>
+            </div>
+        </section>
+
+        <!-- 画面1.5: キャピタリスト一覧 -->
+        <section id="view-all-capitalists" class="view">
+            <div class="search-bar" style="display: flex; gap: 10px; margin-bottom: 1rem;">
+                <input type="text" id="search-capitalist-input" placeholder="氏名、VC名、ドメインで検索..." style="flex: 1;">
+                <select id="filter-interest-status" style="padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    <option value="">すべての関心度</option>
+                    <option value="Interested">関心あり</option>
+                    <option value="Unknown">不明</option>
+                    <option value="NotInterested">関心なし</option>
+                </select>
+            </div>
+            <div class="table-responsive-wrapper">
+                <table id="all-capitalists-table">
+                    <thead>
+                        <tr>
+                            <th>関心度</th>
+                            <th>氏名</th>
+                            <th>VC名</th>
+                            <th>役職・ドメイン</th>
+                            <th>理由・エビデンス</th>
+                        </tr>
+                    </thead>
+                    <tbody id="all-capitalists-table-body"></tbody>
+                </table>
+            </div>
+            <div id="all-capitalists-empty" class="empty-message" style="display:none;">
+                <p>キャピタリストが見つかりません。</p>
             </div>
         </section>
 
@@ -71,13 +107,13 @@
             <span class="modal-close" id="modal-close">&times;</span>
             <h2>VCリスト取込</h2>
             <div class="tab-buttons">
-                <button class="tab-btn active" data-tab="csv">CSV取込</button>
+                <button class="tab-btn active" data-tab="csv">ファイル取込</button>
                 <button class="tab-btn" data-tab="manual">手動追加</button>
             </div>
             <div id="tab-csv" class="tab-content active">
                 <label class="file-label">
-                    CSVファイルを選択
-                    <input type="file" id="csv-file" accept=".csv">
+                    ファイルを選択 (CSV / Excel)
+                    <input type="file" id="csv-file" accept=".csv,.xlsx">
                 </label>
                 <p id="csv-preview"></p>
                 <button id="btn-csv-import" class="btn btn-primary" disabled>取り込む</button>
@@ -104,6 +140,6 @@
         </div>
     </div>
 
-    <script src="/js/app.js"></script>
+    <script src="/js/app.js?v=1.2"></script>
 </body>
 </html>

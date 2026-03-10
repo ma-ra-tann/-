@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\domain\InvestorList.Domain.csproj" />
+    <ProjectReference Include="..\port\InvestorList.Port.csproj" />
+    <ProjectReference Include="..\application\InvestorList.Application.csproj" />
+    <ProjectReference Include="..\adapter\InvestorList.Adapter.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.0" />
+  </ItemGroup>
+
+</Project>
