@@ -67,7 +67,7 @@ header h1 {
 }
 
 main {
-    max-width: 1024px;
+    max-width: 1200px;
     margin: 2rem auto;
     padding: 0 1.5rem;
 }
@@ -83,6 +83,37 @@ main {
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+/* Main Tabs */
+.main-tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--secondary-color);
+    padding-bottom: 0;
+}
+
+.main-tab-btn {
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.75rem 1.5rem;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    margin-bottom: -2px; /* Overlap with border-bottom */
+}
+
+.main-tab-btn:hover {
+    color: var(--primary-hover);
+}
+
+.main-tab-btn.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
 }
 
 /* Buttons */
@@ -185,20 +216,34 @@ main {
 }
 
 /* Table */
+.table-responsive-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* iOSでのスムーズスクロール */
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(125, 211, 252, 0.1), 0 2px 4px -1px rgba(125, 211, 252, 0.06);
+    border: 2px solid var(--secondary-color);
+    margin-bottom: 1rem;
+}
+
 table {
     width: 100%;
+    min-width: 800px; /* PC/スマホ問わず最低幅を確保して横スクロールさせる */
     border-collapse: separate;
     border-spacing: 0;
     background: var(--bg-card);
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 4px 6px -1px rgba(125, 211, 252, 0.1), 0 2px 4px -1px rgba(125, 211, 252, 0.06);
-    border: 2px solid var(--secondary-color);
 }
 th, td {
-    padding: 1.2rem 1.5rem;
+    padding: 1.2rem 1rem;
     text-align: left;
     border-bottom: 2px solid var(--secondary-color);
+    word-break: keep-all; /* 単語の途中で改行されないようにする */
+}
+/* 投資テーマ列など、長くなりやすい列は折り返しを許可する */
+td.wrap-text {
+    white-space: normal;
+    min-width: 200px;
 }
 tr:last-child td {
     border-bottom: none;

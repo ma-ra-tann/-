@@ -29,6 +29,10 @@ const api = {
         form.append('file', file);
         const res = await fetch('/api/vc/import-csv', { method: 'POST', body: form });
         return res.json();
+    },
+    async getAllCapitalists() {
+        const res = await fetch('/api/capitalist');
+        return res.json();
     }
 };
 
@@ -43,6 +47,11 @@ function showView(viewId) {
 
 // --- Screen 1: VC List ---
 async function loadVCList() {
+    // Update tab styles
+    document.querySelectorAll('.main-tab-btn').forEach(btn => btn.classList.remove('active'));
+    const tabBtn = document.getElementById('tab-vc-list');
+    if (tabBtn) tabBtn.classList.add('active');
+
     showView('view-vc-list');
     currentVC = null;
     const funds = await api.getVCList();
@@ -73,12 +82,12 @@ async function loadVCList() {
                     ` : ''}
                 </div>
             </td>
-            <td>${escapeHtml(f.investmentStage)}</td>
-            <td>${escapeHtml(f.investmentTheme)}</td>
-            <td>${f.analysisStatus === '未分析'
+            <td style="white-space: nowrap;">${escapeHtml(f.investmentStage)}</td>
+            <td class="wrap-text">${escapeHtml(f.investmentTheme)}</td>
+            <td style="white-space: nowrap;">${f.analysisStatus === '未分析'
                 ? '<span class="status-badge unknown">未分析</span>'
                 : escapeHtml(f.analysisStatus)}</td>
-            <td>
+            <td style="white-space: nowrap;">
                 ${f.analysisStatus === '未分析'
                     ? `<button class="btn btn-analyze" data-name="${escapeHtml(f.name)}">分析</button>`
                     : `<button class="btn btn-detail" data-name="${escapeHtml(f.name)}">詳細</button>`}
@@ -162,8 +171,85 @@ async function loadVCList() {
     });
 }
 
+// --- Screen 1.5: All Capitalists ---
+let allCapitalistsData = [];
+
+async function loadAllCapitalists() {
+    // Update tab styles
+    document.querySelectorAll('.main-tab-btn').forEach(btn => btn.classList.remove('active'));
+    const tabBtn = document.getElementById('tab-capitalist-list');
+    if (tabBtn) tabBtn.classList.add('active');
+
+    showView('view-all-capitalists');
+    
+    // Fetch data if not already loaded or if we want to refresh
+    allCapitalistsData = await api.getAllCapitalists();
+    renderAllCapitalists();
+}
+
+function renderAllCapitalists() {
+    const tbody = document.getElementById('all-capitalists-table-body');
+    const empty = document.getElementById('all-capitalists-empty');
+    const table = document.getElementById('all-capitalists-table');
+    
+    const query = document.getElementById('search-capitalist-input').value.toLowerCase();
+    const statusFilter = document.getElementById('filter-interest-status').value;
+
+    const filtered = allCapitalistsData.filter(c => {
+        const matchQuery = c.name.toLowerCase().includes(query) || 
+                           c.vcName.toLowerCase().includes(query) || 
+                           (c.investmentDomain && c.investmentDomain.toLowerCase().includes(query));
+        const matchStatus = statusFilter === '' || c.interestStatus === statusFilter;
+        return matchQuery && matchStatus;
+    });
+
+    if (filtered.length === 0) {
+        table.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+    }
+
+    table.style.display = 'table';
+    empty.style.display = 'none';
+    
+    tbody.innerHTML = filtered.map(c => `
+        <tr class="capitalist-row" style="cursor: pointer;" data-vc="${escapeHtml(c.vcName)}" data-name="${escapeHtml(c.name)}">
+            <td>
+                <span class="status-badge ${statusClass(c.interestStatus)}">
+                    ${statusLabel(c.interestStatus)}
+                </span>
+            </td>
+            <td style="font-weight: 500; color: var(--primary-color);">${escapeHtml(c.name)}</td>
+            <td>${escapeHtml(c.vcName)}</td>
+            <td>
+                <div style="font-size: 0.9em; color: var(--text-muted);">${escapeHtml(c.title)}</div>
+                <div>${escapeHtml(c.investmentDomain)}</div>
+            </td>
+            <td style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(c.evidenceSummary)}">
+                ${escapeHtml(c.evidenceSummary)}
+            </td>
+        </tr>
+    `).join('');
+
+    // Event: Click row to see detail
+    tbody.querySelectorAll('.capitalist-row').forEach(row => {
+        row.addEventListener('click', () => {
+            loadCapitalistDetail(row.dataset.vc, row.dataset.name, true);
+        });
+    });
+}
+
+// Event listeners for capitalist filters
+document.getElementById('search-capitalist-input').addEventListener('input', renderAllCapitalists);
+document.getElementById('filter-interest-status').addEventListener('change', renderAllCapitalists);
+
 // --- Screen 2: VC Detail ---
 async function loadVCDetail(vcName) {
+    // Update tab styles
+    document.querySelectorAll('.main-tab-btn').forEach(btn => btn.classList.remove('active'));
+    const tabBtn = document.getElementById('tab-vc-list');
+    if (tabBtn) tabBtn.classList.add('active');
+
     showView('view-vc-detail');
     currentVC = vcName;
     const detail = await api.getVCDetail(vcName);
@@ -221,11 +307,32 @@ async function loadVCDetail(vcName) {
 }
 
 // --- Screen 3: Capitalist Detail ---
-async function loadCapitalistDetail(vcName, capitalistName) {
+async function loadCapitalistDetail(vcName, capitalistName, fromAllList = false) {
+    const isFromAllList = fromAllList || document.getElementById('view-all-capitalists').classList.contains('active');
+    
+    // Update tab styles based on origin
+    document.querySelectorAll('.main-tab-btn').forEach(btn => btn.classList.remove('active'));
+    const tabId = isFromAllList ? 'tab-capitalist-list' : 'tab-vc-list';
+    const tabBtn = document.getElementById(tabId);
+    if (tabBtn) tabBtn.classList.add('active');
+
     showView('view-capitalist-detail');
     const detail = await api.getCapitalistDetail(vcName, capitalistName);
 
-    document.getElementById('btn-back-to-vc').onclick = () => loadVCDetail(vcName);
+    const backBtn = document.getElementById('btn-back-to-vc');
+    if (isFromAllList) {
+        backBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            キャピタリスト一覧に戻る
+        `;
+        backBtn.onclick = () => loadAllCapitalists();
+    } else {
+        backBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            VC詳細に戻る
+        `;
+        backBtn.onclick = () => loadVCDetail(vcName);
+    }
 
     document.getElementById('capitalist-detail-content').innerHTML = `
         <div class="vc-info">
@@ -362,9 +469,9 @@ function statusClass(status) {
 
 function statusLabel(status) {
     switch (status) {
-        case 'Interested': return '⚪ 関心あり';
-        case 'NotInterested': return '✖ 関心なし';
-        default: return '△ 不明';
+        case 'Interested': return '関心あり';
+        case 'NotInterested': return '関心なし';
+        default: return '不明';
     }
 }
 
@@ -386,4 +493,12 @@ function typeLabel(type) {
 }
 
 // --- Init ---
+document.getElementById('tab-vc-list').addEventListener('click', () => {
+    loadVCList();
+});
+
+document.getElementById('tab-capitalist-list').addEventListener('click', () => {
+    loadAllCapitalists();
+});
+
 loadVCList();
