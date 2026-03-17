@@ -31,10 +31,12 @@ public class AgentServiceClient : IWebSearchPort
         return new VCFund(dto.Name, dto.WebsiteUrl, dto.InvestmentStage, dto.InvestmentTheme);
     }
 
-    public async Task<List<Capitalist>> SearchCapitalists(string vcName)
+    public async Task<List<Capitalist>> SearchCapitalists(string vcName, string websiteUrl = "")
     {
-        var response = await _httpClient.PostAsync(
-            $"/search/capitalists?vc_name={Uri.EscapeDataString(vcName)}", null);
+        var query = $"/search/capitalists?vc_name={Uri.EscapeDataString(vcName)}";
+        if (!string.IsNullOrEmpty(websiteUrl))
+            query += $"&website_url={Uri.EscapeDataString(websiteUrl)}";
+        var response = await _httpClient.PostAsync(query, null);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
         var dtos = JsonSerializer.Deserialize<List<CapitalistDto>>(json, JsonOptions) ?? [];

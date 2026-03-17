@@ -36,11 +36,12 @@ public class VCListService : IVCListPort
     public async Task<List<VCFund>> ImportFromCsv(Stream fileStream, string fileName = "")
     {
         var funds = new List<VCFund>();
-        
+
         // Excelファイルの場合はClosedXMLで処理
         if (fileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
         {
-            return await ImportFromExcel(fileStream);
+            funds = await ImportFromExcel(fileStream);
+            return funds;
         }
 
         using var reader = new StreamReader(fileStream);
@@ -102,15 +103,32 @@ public class VCListService : IVCListPort
             
             var region = regionCol >= 0 && regionCol < cols.Length ? cols[regionCol].Trim() : "";
             var url = urlCol >= 0 && urlCol < cols.Length ? cols[urlCol].Trim() : "";
+            if (!string.IsNullOrEmpty(url))
+            {
+                if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                {
+                    // httpから始まっていないが、ドメインっぽい文字列が含まれている場合は https:// を補完
+                    if (url.Contains('.') && !url.Contains(' '))
+                    {
+                        url = "https://" + url;
+                    }
+                    else
+                    {
+                        url = "";
+                    }
+                }
+            }
 
             // URLが空でも、他の列にURLっぽいものがあればそれを採用するフォールバック
             if (string.IsNullOrEmpty(url))
             {
                 for (int j = 1; j < cols.Length; j++)
                 {
-                    if (cols[j].Trim().StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                    var val = cols[j].Trim();
+                    if (val.StartsWith("http", StringComparison.OrdinalIgnoreCase) || 
+                        (val.Contains('.') && !val.Contains(' ') && (val.StartsWith("www.") || val.EndsWith(".com") || val.EndsWith(".jp") || val.EndsWith(".vc") || val.EndsWith(".co.jp"))))
                     {
-                        url = cols[j].Trim();
+                        url = val.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? val : "https://" + val;
                         break;
                     }
                 }
@@ -120,22 +138,6 @@ public class VCListService : IVCListPort
             await _db.Save(fund);
             funds.Add(fund);
         }
-
-        // CSV取り込み完了後、全VCの分析を非同期でバックグラウンド実行（並列処理）
-        _ = Task.Run(async () =>
-        {
-            await Parallel.ForEachAsync(funds, new ParallelOptions { MaxDegreeOfParallelism = 5 }, async (fund, token) =>
-            {
-                try
-                {
-                    await _analysisPort.AnalyzeVC(fund.Name);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error analyzing VC {fund.Name}: {ex.Message}");
-                }
-            });
-        });
 
         return funds;
     }
@@ -183,26 +185,40 @@ public class VCListService : IVCListPort
             if (headerRowIndex >= 0) break;
         }
 
+        // URL列と名前列が同じ場合はURL列を無効にする（ハイパーリンクで取得する）
+        if (urlCol == nameCol) urlCol = -1;
+
         // ヘッダーが見つからない場合は1行目をヘッダーとして扱う簡易モード
         if (headerRowIndex < 0)
         {
             for (int i = 1; i < rows.Count; i++) // 2行目から
             {
                 var row = rows[i];
-                var name = row.Cell(1).GetString().Trim();
+                var nameCell = row.Cell(1);
+                var name = nameCell.GetString().Trim();
                 if (string.IsNullOrWhiteSpace(name)) continue;
 
-                var url = "";
+                // 名前セルのハイパーリンクからURLを取得
+                var url = ExtractHyperlink(nameCell);
                 var stage = "";
                 var theme = "";
 
-                // 2列目以降からURLを探す
+                // 2列目以降からURLやその他情報を探す
                 for (int j = 2; j <= row.LastCellUsed()?.Address.ColumnNumber; j++)
                 {
-                    var val = row.Cell(j).GetString().Trim();
-                    if (val.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                    var cell = row.Cell(j);
+                    var val = cell.GetString().Trim();
+                    // ハイパーリンクからURLを取得（まだ見つかっていない場合）
+                    if (string.IsNullOrEmpty(url))
                     {
-                        url = val;
+                        var cellUrl = ExtractHyperlink(cell);
+                        if (!string.IsNullOrEmpty(cellUrl)) { url = cellUrl; continue; }
+                    }
+                    if (val.StartsWith("http", StringComparison.OrdinalIgnoreCase) ||
+                        (val.Contains('.') && !val.Contains(' ') && (val.StartsWith("www.") || val.EndsWith(".com") || val.EndsWith(".jp") || val.EndsWith(".vc") || val.EndsWith(".co.jp"))))
+                    {
+                        if (string.IsNullOrEmpty(url))
+                            url = val.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? val : "https://" + val;
                     }
                     else if (val == "Seed" || val == "Early" || val == "Middle" || val == "Later" || val.Contains("ステージ"))
                     {
@@ -225,8 +241,12 @@ public class VCListService : IVCListPort
             for (int i = headerRowIndex + 1; i < rows.Count; i++)
             {
                 var row = rows[i];
-                var name = nameCol > 0 ? row.Cell(nameCol).GetString().Trim() : "";
+                var nameCell = nameCol > 0 ? row.Cell(nameCol) : null;
+                var name = nameCell?.GetString().Trim() ?? "";
                 if (string.IsNullOrWhiteSpace(name)) continue;
+
+                // 名前セルのハイパーリンクからURLを取得
+                var hyperlinkUrl = nameCell != null ? ExtractHyperlink(nameCell) : "";
 
                 var stage = "";
                 for (int s = 0; s < stageCols.Length; s++)
@@ -248,6 +268,31 @@ public class VCListService : IVCListPort
 
                 var region = regionCol > 0 ? row.Cell(regionCol).GetString().Trim() : "";
                 var url = urlCol > 0 ? row.Cell(urlCol).GetString().Trim() : "";
+                // URL列にハイパーリンクが設定されている場合も取得
+                if (string.IsNullOrEmpty(url) && urlCol > 0)
+                {
+                    url = ExtractHyperlink(row.Cell(urlCol));
+                }
+                // 名前セルのハイパーリンクをフォールバックとして使用
+                if (string.IsNullOrEmpty(url) && !string.IsNullOrEmpty(hyperlinkUrl))
+                {
+                    url = hyperlinkUrl;
+                }
+                if (!string.IsNullOrEmpty(url))
+                {
+                    if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // httpから始まっていないが、ドメインっぽい文字列が含まれている場合は https:// を補完
+                        if (url.Contains('.') && !url.Contains(' '))
+                        {
+                            url = "https://" + url;
+                        }
+                        else
+                        {
+                            url = "";
+                        }
+                    }
+                }
 
                 // URLが空の場合のフォールバック
                 if (string.IsNullOrEmpty(url))
@@ -255,9 +300,10 @@ public class VCListService : IVCListPort
                     for (int j = 1; j <= row.LastCellUsed()?.Address.ColumnNumber; j++)
                     {
                         var val = row.Cell(j).GetString().Trim();
-                        if (val.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                        if (val.StartsWith("http", StringComparison.OrdinalIgnoreCase) || 
+                            (val.Contains('.') && !val.Contains(' ') && (val.StartsWith("www.") || val.EndsWith(".com") || val.EndsWith(".jp") || val.EndsWith(".vc") || val.EndsWith(".co.jp"))))
                         {
-                            url = val;
+                            url = val.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? val : "https://" + val;
                             break;
                         }
                     }
@@ -268,22 +314,6 @@ public class VCListService : IVCListPort
                 funds.Add(fund);
             }
         }
-
-        // バックグラウンド分析
-        _ = Task.Run(async () =>
-        {
-            await Parallel.ForEachAsync(funds, new ParallelOptions { MaxDegreeOfParallelism = 5 }, async (fund, token) =>
-            {
-                try
-                {
-                    await _analysisPort.AnalyzeVC(fund.Name);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error analyzing VC {fund.Name}: {ex.Message}");
-                }
-            });
-        });
 
         return funds;
     }
@@ -306,9 +336,10 @@ public class VCListService : IVCListPort
                 for (int j = 1; j < parts.Length; j++)
                 {
                     var val = parts[j].Trim();
-                    if (val.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                    if (val.StartsWith("http", StringComparison.OrdinalIgnoreCase) || 
+                        (val.Contains('.') && !val.Contains(' ') && (val.StartsWith("www.") || val.EndsWith(".com") || val.EndsWith(".jp") || val.EndsWith(".vc") || val.EndsWith(".co.jp"))))
                     {
-                        url = val;
+                        url = val.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? val : "https://" + val;
                     }
                     else if (val == "Seed" || val == "Early" || val == "Middle" || val == "Later" || val.Contains("ステージ"))
                     {
@@ -326,22 +357,6 @@ public class VCListService : IVCListPort
             }
         }
 
-        // CSV取り込み完了後、全VCの分析を非同期でバックグラウンド実行（並列処理）
-        _ = Task.Run(async () =>
-        {
-            await Parallel.ForEachAsync(funds, new ParallelOptions { MaxDegreeOfParallelism = 5 }, async (fund, token) =>
-            {
-                try
-                {
-                    await _analysisPort.AnalyzeVC(fund.Name);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error analyzing VC {fund.Name}: {ex.Message}");
-                }
-            });
-        });
-
         return funds;
     }
 
@@ -357,6 +372,21 @@ public class VCListService : IVCListPort
                     return stageNames[s];
             }
         }
+        return "";
+    }
+
+    private static string ExtractHyperlink(IXLCell cell)
+    {
+        try
+        {
+            if (cell.HasHyperlink)
+            {
+                var link = cell.GetHyperlink().ExternalAddress?.ToString() ?? "";
+                if (link.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                    return link;
+            }
+        }
+        catch { /* ハイパーリンク取得に失敗した場合は無視 */ }
         return "";
     }
 

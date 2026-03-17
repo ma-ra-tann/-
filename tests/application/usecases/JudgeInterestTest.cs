@@ -70,5 +70,5 @@ public class StubLLMAnalysisPort : ILLMAnalysisPort
         _status = status;
     }
 
-    public Task<InterestStatus> Judge(Capitalist capitalist) => Task.FromResult(_status);
+    public Task<InterestStatus> Judge(Capitalist capitalist, string vcName = "") => Task.FromResult(_status);
 }

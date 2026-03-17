@@ -10,7 +10,7 @@
     <header>
         <h1>投資家リスト作成ツール</h1>
         <div class="header-actions">
-            <button id="btn-analyze-all" class="btn btn-secondary" style="margin-right: 10px;">未分析を一括分析</button>
+            <button id="btn-analyze-all" class="btn btn-secondary" style="margin-right: 10px;">分析</button>
             <button id="btn-import" class="btn btn-primary">VCリスト取込</button>
         </div>
     </header>
@@ -57,6 +57,7 @@
                     <option value="Unknown">不明</option>
                     <option value="NotInterested">関心なし</option>
                 </select>
+                <button id="btn-export-csv" class="btn btn-secondary" style="white-space: nowrap;">CSVダウンロード</button>
             </div>
             <div class="table-responsive-wrapper">
                 <table id="all-capitalists-table">

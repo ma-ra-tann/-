@@ -12,6 +12,9 @@
   <Folder Name="/src/port/">
     <Project Path="src/port/InvestorList.Port.csproj" />
   </Folder>
+  <Folder Name="/src/host/">
+    <Project Path="src/host/InvestorList.Host.csproj" />
+  </Folder>
   <Folder Name="/tests/" />
   <Folder Name="/tests/adapter/">
     <Project Path="tests/adapter/InvestorList.Adapter.Tests.csproj" />

@@ -31,21 +31,31 @@ public class AnalysisService : IAnalysisPort
             fund = new VCFund(fund.Name, knownUrl, fund.InvestmentStage, fund.InvestmentTheme);
         }
 
-        var capitalists = await _search.SearchCapitalists(vcName);
+        var capitalists = await _search.SearchCapitalists(vcName, fund.WebsiteUrl ?? "");
         
-        // キャピタリストごとの分析を並列実行
+        // キャピタリストごとの分析を並列実行（API制限対策のため並行数を制限）
+        var semaphore = new SemaphoreSlim(3); // 同時に3人まで
+        
         var analysisTasks = capitalists.Select(async capitalist => 
         {
-            var evidences = await _search.SearchEvidences(capitalist.Name, vcName);
-            foreach (var evidence in evidences)
+            await semaphore.WaitAsync();
+            try
             {
-                capitalist.FinancialModelInterest.AddEvidence(evidence);
-            }
+                var evidences = await _search.SearchEvidences(capitalist.Name, vcName);
+                foreach (var evidence in evidences)
+                {
+                    capitalist.FinancialModelInterest.AddEvidence(evidence);
+                }
 
-            var status = await _llm.Judge(capitalist);
-            capitalist.FinancialModelInterest.Status = status;
-            
-            return capitalist;
+                var status = await _llm.Judge(capitalist, vcName);
+                capitalist.FinancialModelInterest.Status = status;
+                
+                return capitalist;
+            }
+            finally
+            {
+                semaphore.Release();
+            }
         });
 
         var analyzedCapitalists = await Task.WhenAll(analysisTasks);

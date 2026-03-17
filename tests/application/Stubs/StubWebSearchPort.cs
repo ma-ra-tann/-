@@ -19,7 +19,7 @@ public class StubWebSearchPort : IWebSearchPort
         _evidences = evidences ?? [];
     }
 
-    public Task<VCFund> SearchVCProfile(string vcName) => Task.FromResult(_fund);
-    public Task<List<Capitalist>> SearchCapitalists(string vcName) => Task.FromResult(_capitalists);
-    public Task<List<Evidence>> SearchEvidences(string capitalistName) => Task.FromResult(_evidences);
+    public Task<VCFund> SearchVCProfile(string vcName, string? knownUrl = null) => Task.FromResult(_fund);
+    public Task<List<Capitalist>> SearchCapitalists(string vcName, string websiteUrl = "") => Task.FromResult(_capitalists);
+    public Task<List<Evidence>> SearchEvidences(string capitalistName, string vcName = "") => Task.FromResult(_evidences);
 }

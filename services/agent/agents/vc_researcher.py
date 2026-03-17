@@ -9,28 +9,8 @@ class VCResearcher:
         self._claude = claude
 
     async def research(self, vc_name: str, known_url: str | None = None) -> VCProfile:
-        # 複数キーワードで検索して精度を上げる
-        queries = [
-            f"{vc_name} 投資ステージ シード アーリー",
-            f"{vc_name} 投資領域 テーマ ポートフォリオ",
-        ]
-        
-        if not known_url:
-            queries.append(f"{vc_name} 公式サイト 投資方針")
-
-        all_results = []
-        for query in queries:
-            results = self._tavily.search(query, max_results=3)
-            all_results.extend(results)
-
-        # URLで重複排除
-        seen_urls = set()
-        unique_results = []
-        for r in all_results:
-            url = r.get("url", "")
-            if url not in seen_urls:
-                seen_urls.add(url)
-                unique_results.append(r)
+        query = f"{vc_name} 公式サイト 投資ステージ 投資領域 投資テーマ"
+        unique_results = await self._tavily.search(query, max_results=5)
 
         context = "\n".join(
             f"- {r.get('title', '')}: {r.get('content', '')[:300]}"
@@ -72,7 +52,7 @@ JSONオブジェクトのみを返してください。
 {context}"""
 
         try:
-            data = self._claude.ask_json(prompt)
+            data = await self._claude.ask_json(prompt)
             return VCProfile(**data)
         except (ValueError, TypeError):
             return VCProfile(name=vc_name)

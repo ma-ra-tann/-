@@ -68,7 +68,11 @@ async function loadVCList() {
     table.style.display = 'table';
     empty.style.display = 'none';
     tbody.innerHTML = funds.map(f => {
-        const hasUrl = f.websiteUrl && f.websiteUrl.trim() !== '' && f.websiteUrl !== '調査不足（URL不明）' && f.websiteUrl !== '調査不足（明記なし）';
+        const hasUrl = f.websiteUrl && 
+                       f.websiteUrl.trim() !== '' && 
+                       f.websiteUrl !== '調査不足（URL不明）' && 
+                       f.websiteUrl !== '調査不足（明記なし）' &&
+                       (f.websiteUrl.startsWith('http://') || f.websiteUrl.startsWith('https://'));
         const safeUrl = hasUrl ? f.websiteUrl.replace(/"/g, '&quot;') : '';
         return `
         <tr>
@@ -90,7 +94,8 @@ async function loadVCList() {
             <td style="white-space: nowrap;">
                 ${f.analysisStatus === '未分析'
                     ? `<button class="btn btn-analyze" data-name="${escapeHtml(f.name)}">分析</button>`
-                    : `<button class="btn btn-detail" data-name="${escapeHtml(f.name)}">詳細</button>`}
+                    : `<button class="btn btn-detail" data-name="${escapeHtml(f.name)}">詳細</button>
+                       <button class="btn btn-reanalyze" data-name="${escapeHtml(f.name)}" style="margin-left: 0.25rem; font-size: 0.75rem; padding: 0.25rem 0.5rem; background: transparent; color: var(--text-muted); border: 1px solid var(--border-color);">再分析</button>`}
             </td>
         </tr>
     `}).join('');
@@ -118,16 +123,22 @@ async function loadVCList() {
             const unanalyzedFunds = funds.filter(f => f.analysisStatus === '未分析');
             if (unanalyzedFunds.length === 0) return;
             
-            if (!confirm(`未分析のVC ${unanalyzedFunds.length}件 を一括分析します。よろしいですか？\n（※APIの呼び出しに時間がかかる場合があります）`)) {
+            if (!confirm(`未分析のVC ${unanalyzedFunds.length}件 を分析します。よろしいですか？\n（※APIの呼び出しに時間がかかる場合があります）`)) {
                 return;
             }
             
             newBtnAnalyzeAll.disabled = true;
-            newBtnAnalyzeAll.textContent = '一括分析中...';
+            newBtnAnalyzeAll.textContent = '分析中...';
             newBtnAnalyzeAll.classList.add('analyzing');
             
-            // 順番に分析を実行
-            for (const fund of unanalyzedFunds) {
+            // 5社ずつ並列で分析を実行
+            const concurrencyLimit = 5;
+            let currentIndex = 0;
+
+            async function processNext() {
+                if (currentIndex >= unanalyzedFunds.length) return;
+                
+                const fund = unanalyzedFunds[currentIndex++];
                 try {
                     // UI上の該当行のボタンも「分析中」にする
                     const rowBtn = document.querySelector(`.btn-analyze[data-name="${escapeHtml(fund.name)}"]`);
@@ -141,7 +152,19 @@ async function loadVCList() {
                 } catch (e) {
                     console.error(`Failed to analyze ${fund.name}:`, e);
                 }
+                
+                // 1つ終わったら次を実行
+                await processNext();
             }
+
+            // 最初に concurrencyLimit 個のタスクを同時に開始
+            const workers = [];
+            for (let i = 0; i < concurrencyLimit && i < unanalyzedFunds.length; i++) {
+                workers.push(processNext());
+            }
+            
+            // すべてのワーカーが終わるのを待つ
+            await Promise.all(workers);
             
             newBtnAnalyzeAll.textContent = '未分析を一括分析';
             newBtnAnalyzeAll.classList.remove('analyzing');
@@ -168,6 +191,22 @@ async function loadVCList() {
     // Event: Detail button
     tbody.querySelectorAll('.btn-detail').forEach(btn => {
         btn.addEventListener('click', () => loadVCDetail(btn.dataset.name));
+    });
+
+    // Event: Re-analyze button
+    tbody.querySelectorAll('.btn-reanalyze').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            btn.textContent = '分析中...';
+            btn.classList.add('analyzing');
+            try {
+                await api.analyzeVC(btn.dataset.name);
+                await loadVCList();
+            } catch {
+                btn.textContent = 'エラー';
+                btn.disabled = false;
+            }
+        });
     });
 }
 
@@ -254,7 +293,11 @@ async function loadVCDetail(vcName) {
     currentVC = vcName;
     const detail = await api.getVCDetail(vcName);
 
-    const hasUrl = detail.websiteUrl && detail.websiteUrl.trim() !== '' && detail.websiteUrl !== '調査不足（URL不明）' && detail.websiteUrl !== '調査不足（明記なし）';
+    const hasUrl = detail.websiteUrl && 
+                   detail.websiteUrl.trim() !== '' && 
+                   detail.websiteUrl !== '調査不足（URL不明）' && 
+                   detail.websiteUrl !== '調査不足（明記なし）' &&
+                   (detail.websiteUrl.startsWith('http://') || detail.websiteUrl.startsWith('https://'));
     const safeUrl = hasUrl ? detail.websiteUrl.replace(/"/g, '&quot;') : '';
 
     document.getElementById('vc-detail-header').innerHTML = `
@@ -412,20 +455,28 @@ csvFile.addEventListener('change', () => {
 csvBtn.addEventListener('click', async () => {
     csvBtn.disabled = true;
     csvBtn.textContent = '取り込み中...';
-    const result = await api.importCSV(csvFile.files[0]);
-    modal.classList.remove('active');
-    csvBtn.textContent = '取り込む';
-    csvFile.value = '';
-    document.getElementById('csv-preview').textContent = '';
-    
-    // Show a toast or notification that background analysis has started
-    const toast = document.createElement('div');
-    toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#4CAF50;color:white;padding:15px;border-radius:4px;z-index:1000;box-shadow:0 2px 5px rgba(0,0,0,0.2);';
-    toast.textContent = `${result.length}件のVCを取り込み、バックグラウンドで分析を開始しました。リストは自動的に更新されませんが、定期的にリロードしてください。`;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 5000);
+    try {
+        const result = await api.importCSV(csvFile.files[0]);
+        modal.classList.remove('active');
 
-    await loadVCList();
+        const toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#4CAF50;color:white;padding:15px;border-radius:4px;z-index:1000;box-shadow:0 2px 5px rgba(0,0,0,0.2);';
+        toast.textContent = `${result.Count}件のVCを取り込みました。右上の「分析」ボタンから分析を開始してください。`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 5000);
+    } catch (e) {
+        const toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#e53e3e;color:white;padding:15px;border-radius:4px;z-index:1000;box-shadow:0 2px 5px rgba(0,0,0,0.2);';
+        toast.textContent = '取り込みに失敗しました。ファイルを確認してください。';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 5000);
+    } finally {
+        csvBtn.textContent = '取り込む';
+        csvBtn.disabled = false;
+        csvFile.value = '';
+        document.getElementById('csv-preview').textContent = '';
+        await loadVCList();
+    }
 });
 
 // Manual add
@@ -499,6 +550,10 @@ document.getElementById('tab-vc-list').addEventListener('click', () => {
 
 document.getElementById('tab-capitalist-list').addEventListener('click', () => {
     loadAllCapitalists();
+});
+
+document.getElementById('btn-export-csv').addEventListener('click', () => {
+    window.location.href = '/api/capitalist/export';
 });
 
 loadVCList();

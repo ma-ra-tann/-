@@ -12,6 +12,7 @@ class CapitalistInfo(BaseModel):
     name: str
     title: str = ""
     investment_domain: str = ""
+    profile_context: str = ""
 
 
 class Evidence(BaseModel):
@@ -46,3 +47,4 @@ class JudgeRequest(BaseModel):
     title: str
     investment_domain: str
     evidences: list[Evidence] = []
+    vc_name: str = ""
