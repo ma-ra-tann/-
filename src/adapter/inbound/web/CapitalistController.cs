@@ -36,21 +36,30 @@ public class CapitalistController : ControllerBase
     [HttpGet("export")]
     public async Task<IActionResult> ExportCsv()
     {
+        const int maxEvidences = 6;
+
         var funds = await _vcListPort.GetAllVCs();
-        var capitalists = funds.SelectMany(f => f.Capitalists.Select(c => new
+        var rows = funds.SelectMany(f => f.Capitalists.Select(c => new
         {
             VcName = f.Name,
+            VcUrl = f.WebsiteUrl,
             c.Name,
             c.Title,
             c.InvestmentDomain,
             InterestStatus = c.FinancialModelInterest.Status.ToString(),
-            EvidenceSummary = c.FinancialModelInterest.Evidences.Select(e => e.Summary).FirstOrDefault() ?? ""
+            Evidences = c.FinancialModelInterest.Evidences.ToList()
         })).ToList();
 
         var sb = new StringBuilder();
-        sb.AppendLine("\"VC名\",\"氏名\",\"役職\",\"投資担当領域\",\"関心度\",\"判定理由（エビデンス）\"");
+        var header = new List<string> { "VC名", "VCサイトURL", "氏名", "役職", "投資担当領域", "関心度" };
+        for (int i = 1; i <= maxEvidences; i++)
+        {
+            header.Add($"判定理由{i}");
+            header.Add($"根拠URL{i}");
+        }
+        sb.AppendLine(string.Join(",", header.Select(h => CsvEscape(h))));
 
-        foreach (var c in capitalists)
+        foreach (var c in rows)
         {
             var interest = c.InterestStatus switch
             {
@@ -58,7 +67,21 @@ public class CapitalistController : ControllerBase
                 "NotInterested" => "関心なし",
                 _ => "不明"
             };
-            sb.AppendLine($"{CsvEscape(c.VcName)},{CsvEscape(c.Name)},{CsvEscape(c.Title)},{CsvEscape(c.InvestmentDomain)},{CsvEscape(interest)},{CsvEscape(c.EvidenceSummary)}");
+            var cols = new List<string> { c.VcName, c.VcUrl, c.Name, c.Title, c.InvestmentDomain, interest };
+            for (int i = 0; i < maxEvidences; i++)
+            {
+                if (i < c.Evidences.Count)
+                {
+                    cols.Add(c.Evidences[i].Summary ?? "");
+                    cols.Add(c.Evidences[i].SourceUrl ?? "");
+                }
+                else
+                {
+                    cols.Add("");
+                    cols.Add("");
+                }
+            }
+            sb.AppendLine(string.Join(",", cols.Select(v => CsvEscape(v))));
         }
 
         var bom = new byte[] { 0xEF, 0xBB, 0xBF };
